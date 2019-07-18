@@ -31,9 +31,6 @@ Vue.component('table-row', {
     `
 })
 
-let config;
-let channelsXML;
-
 let app = new Vue({
     el: '#app',
     data: {
@@ -153,35 +150,41 @@ let app = new Vue({
             }
         },
         loadXMLData(file) {
-            let reader = new FileReader();
             let vm = this;
 
-            reader.onloadstart = (e) => {
+            let reader = new FileReader();
+
+            reader.onloadstart = () => {
                 vm.isLoading = true;
+            }
+
+            reader.onloadend = () => {
+                vm.isLoading = false;
+                vm.isLoaded = true;
             }
 
             reader.onload = (e) => {
                 try {
                     let oParser = new DOMParser();
-                    oDom = oParser.parseFromString(e.target.result, "application/xml");
-                    config = oDom.getElementsByTagName('serverConfiguration')[0];
-                    
-                    let serverSettings = config.getElementsByTagName('serverSettings')[0];
+                    let oDom = oParser.parseFromString(e.target.result, "application/xml");
+                    let config = this.getElements(oDom, 'serverConfiguration')[0];
+
+                    let serverSettings = this.getElements(config, 'serverSettings')[0];
                     
                     vm.serverSettings = {
-                        serverName: serverSettings.getElementsByTagName('serverName')[0].innerHTML.toString(),
+                        serverName: this.getElements(serverSettings, 'serverName')[0].innerHTML.toString(),
                         version: config.getAttribute('version').toString(),
-                        queueBufferSize: serverSettings.getElementsByTagName('queueBufferSize')[0].innerHTML.toString()
+                        queueBufferSize: this.getElements(serverSettings, 'queueBufferSize')[0].innerHTML.toString()
                     };
 
-                    let alertsXML = config.getElementsByTagName('alerts')[0].getElementsByTagName('alertModel');
+                    let alertsXML = this.getElements(this.getElements(config, 'alerts')[0], 'alertModel');
                     let alerts = [];
 
                     for(let alert of alertsXML) {
                         var alertObj = {
-                            'id': alert.getElementsByTagName('id')[0].innerHTML.toString(),
-                            'name': alert.getElementsByTagName('name')[0].innerHTML.toString(),
-                            'enabled': alert.getElementsByTagName('enabled')[0].innerHTML.toString()
+                            'id': this.getElements(alert, 'id')[0].innerHTML.toString(),
+                            'name': this.getElements(alert, 'name')[0].innerHTML.toString(),
+                            'enabled': this.getElements(alert, 'enabled')[0].innerHTML.toString()
                         };
                     
                         alerts.push(alertObj);
@@ -190,14 +193,14 @@ let app = new Vue({
                     alerts.sort(compareNames);
                     vm.alerts = alerts;
 
-                    let channelGroupsXML = config.getElementsByTagName('channelGroups')[0].getElementsByTagName('channelGroup');
+                    let channelGroupsXML = this.getElements(this.getElements(config, 'channelGroups')[0], 'channelGroup');
                     let channelGroups = [];
 
                     for(let channelGroup of channelGroupsXML) {
                         var channelGroupObj = {
-                            'id': channelGroup.getElementsByTagName('id')[0].innerHTML.toString(),
-                            'name': channelGroup.getElementsByTagName('name')[0].innerHTML.toString(),
-                            'channelCount': channelGroup.getElementsByTagName('channels')[0].getElementsByTagName('channel').length
+                            'id': this.getElements(channelGroup, 'id')[0].innerHTML.toString(),
+                            'name': this.getElements(channelGroup, 'name')[0].innerHTML.toString(),
+                            'channelCount': this.getElements(this.getElements(channelGroup, 'channels')[0], 'channel').length
                         };
                     
                         channelGroups.push(channelGroupObj);
@@ -206,20 +209,20 @@ let app = new Vue({
                     channelGroups.sort(compareNames);
                     vm.channelGroups = channelGroups;
                     
-                    let channelTagsXML = config.getElementsByTagName('channelTags')[0].getElementsByTagName('channelTag');
+                    let channelTagsXML = this.getElements(this.getElements(config, 'channelTags')[0], 'channelTag');
                     let channelTags = [];
 
                     for(let channelTag of channelTagsXML) {
-                        let bgColor = channelTag.getElementsByTagName('backgroundColor')[0];
-                        let red = bgColor.getElementsByTagName('red')[0].innerHTML.toString(); 
-                        let green = bgColor.getElementsByTagName('green')[0].innerHTML.toString();
-                        let blue = bgColor.getElementsByTagName('blue')[0].innerHTML.toString();
-                        let alpha = bgColor.getElementsByTagName('alpha')[0].innerHTML.toString();
+                        let bgColor = this.getElements(channelTag, 'backgroundColor')[0];
+                        let red = this.getElements(bgColor, 'red')[0].innerHTML.toString(); 
+                        let green = this.getElements(bgColor, 'green')[0].innerHTML.toString();
+                        let blue = this.getElements(bgColor, 'blue')[0].innerHTML.toString();
+                        let alpha = this.getElements(bgColor, 'alpha')[0].innerHTML.toString();
                     
                         let channelTagObj = {
-                            'id': channelTag.getElementsByTagName('id')[0].innerHTML.toString(),
-                            'name': channelTag.getElementsByTagName('name')[0].innerHTML.toString(),
-                            'channelCount': channelTag.getElementsByTagName('channelIds')[0].getElementsByTagName('string').length,
+                            'id': this.getElements(channelTag, 'id')[0].innerHTML.toString(),
+                            'name': this.getElements(channelTag, 'name')[0].innerHTML.toString(),
+                            'channelCount': this.getElements(this.getElements(channelTag, 'channelIds')[0], 'string').length,
                             'backgroundColor': `rgb(${red},${green},${blue},${alpha})`
                         };
                     
@@ -229,8 +232,8 @@ let app = new Vue({
                     channelTags.sort(compareNames);
                     vm.channelTags = channelTags;
 
-                    let allChannelsXML = config.getElementsByTagName('channels');
-                    // let channelsXML;
+                    let allChannelsXML = this.getElements(config, 'channels');
+                    let channelsXML;
                     let channels = [];
                     let nonProductionStorage = [];
                     let noMetadataPruning = [];
@@ -238,38 +241,39 @@ let app = new Vue({
 
                     for(let allChannel of allChannelsXML) {
                         if(allChannel.parentNode.localName.toString() == "serverConfiguration") {
-                            channelsXML = allChannel.getElementsByTagName('channel');
+                            channelsXML = this.getElements(allChannel, 'channel');
                         }
                     }
 
                     for(let channel of channelsXML) {
-                        let name = channel.getElementsByTagName('name')[0].innerHTML.toString();
+                        //this.getElements(channel, 'name');
+                        let name = this.getElements(channel, 'name')[0].innerHTML.toString();
                         let properties;
 
-                        for(let prop of channel.getElementsByTagName('properties')) {
+                        for(let prop of this.getElements(channel, 'properties')) {
                             if(prop.parentNode.localName.toString() == "channel") {
                                 properties = prop;
                             }
                         }
 
-                        let metadata = channel.getElementsByTagName('exportData')[0].getElementsByTagName('metadata')[0];
-                        let description = channel.getElementsByTagName('description')[0].innerHTML.toString();
+                        let metadata = this.getElements(this.getElements(channel, 'exportData')[0], 'metadata')[0];
+                        let description = this.getElements(channel, 'description')[0].innerHTML.toString();
 
-                        let pruningSettings = metadata.getElementsByTagName('pruningSettings');
+                        let pruningSettings = this.getElements(metadata, 'pruningSettings');
                         let pruneMetaData = '';
                         let pruneContentDays = '';
 
                         if(pruningSettings.length == 1) {
                             pruningSettings = pruningSettings[0];
 
-                            pruneMetaData = pruningSettings.getElementsByTagName('pruneMetaDataDays');
+                            pruneMetaData = this.getElements(pruningSettings, 'pruneMetaDataDays');
                             if(pruneMetaData.length == 1) {
                                 pruneMetaData = pruneMetaData[0].innerHTML.toString();
                             } else {
                                 pruneMetaData = ''
                             }
 
-                            pruneContentDays = pruningSettings.getElementsByTagName('pruneContentDays');
+                            pruneContentDays = this.getElements(pruningSettings, 'pruneContentDays');
                             if(pruneContentDays.length == 1) {
                                 pruneContentDays = pruneContentDays[0].innerHTML.toString();
                             } else {
@@ -278,10 +282,10 @@ let app = new Vue({
                         }
                     
                         var channelObj = {
-                            'id': channel.getElementsByTagName('id')[0].innerHTML.toString(),
+                            'id': this.getElements(channel, 'id')[0].innerHTML.toString(),
                             'name': name,
                             'prettyName': _.startCase(name),
-                            'messageStorageMode': properties.getElementsByTagName('messageStorageMode')[0].innerHTML.toString().toLowerCase(),
+                            'messageStorageMode': this.getElements(properties, 'messageStorageMode')[0].innerHTML.toString().toLowerCase(),
                             'developmentStorage': false, 
                             'hasPruning': false,
                             'pruneMetaData': pruneMetaData,
@@ -289,7 +293,7 @@ let app = new Vue({
                             'hasDescription': false,
                             'description': description.substring(0, 25),
                             'isDanger': false,
-                            'enabled': (metadata.getElementsByTagName('enabled')[0].innerHTML.toString() == 'true')
+                            'enabled': (this.getElements(metadata, 'enabled')[0].innerHTML.toString() == 'true')
                         };
                     
                         if(channelObj.messageStorageMode.indexOf('development') > -1) {
@@ -330,12 +334,8 @@ let app = new Vue({
                     vm.noMetadataPruning = noMetadataPruning;
 
                     vm.uploadError = false;
-                    vm.isLoaded = true;
-                    vm.isLoading = false;
                 } catch(error) {
-                    vm.uploadError = true;
-                    vm.isLoading = false;
-                    vm.errorMessage = `<strong>Malformed XML config:</strong><br/>${error.toString()}`;
+                    vm.setError('Malformed XML config', error);
                 }
             }
 
@@ -357,9 +357,7 @@ let app = new Vue({
                     vm.isLoaded = true;
                     vm.persist();
                 } catch(error) {
-                    vm.uploadError = true;
-                    vm.isLoading = false;
-                    vm.errorMessage = `<strong>Malformed JSON report:</strong><br/>${error.toString()}`;
+                    vm.setError('Malformed JSON report', error);
                 }
             }
 
@@ -375,9 +373,39 @@ let app = new Vue({
             localStorage.setItem('channels', JSON.stringify(this.channels));
             localStorage.setItem('noDescription', JSON.stringify(this.noDescription));
             localStorage.setItem('alerts', JSON.stringify(this.alerts));
+        },
+        getElements(document, name) {
+            if(!isBlank(name)) {
+                try {
+                    return document.getElementsByTagName(name);
+                } catch(error) {
+                    this.setError(`Coudld not get element (${name})`, error);
+                }
+            } else {
+                return null;
+            }
+        },
+        setError(message, exception) {
+            let errMessage = 'Error message not passed';
+
+            if(!isBlank(message)) {
+                errMessage = `<strong>${message}:</strong><br/>`;
+            }
+
+            if(!_.isNull(exception)) {
+                errMessage = `${errMessage}Line: ${exception.lineNumber}<br/>${exception.toString()}`;
+            }
+
+            this.uploadError = true;
+            this.isLoading = false;
+            this.errorMessage = errMessage;
         }
     }
 });
+
+isBlank = (value) => {
+    return _.isEmpty(value) && !_.isNumber(value) || _.isNaN(value);
+}
 
 compareNames = (a, b) => {
     if(a.name.toLowerCase() < b.name.toLowerCase()) {

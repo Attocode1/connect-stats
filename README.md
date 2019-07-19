@@ -1,5 +1,5 @@
 # Connect Stats
-Shows current Connect inventory, using a Connect Configuration Export.
+An offline Connect Configuration Overview.
 
 <a href="assets/images/sample-report.png"><img src="assets/images/sample-report.png" height="500"/></a>
 

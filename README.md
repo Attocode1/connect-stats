@@ -29,6 +29,22 @@ Currently Displays:
 - No Descriptions
 	- Channel Name
 
+## Usage
+Export Connect Configuration using one of the following:
+
+### Connect Command Line Interface (CLI)
+`exportcfg PATH-TO-FILE`
+
+### Connect Administrator
+1. Settings
+2. Server Tasks
+	- Backup Config
+
+### Connect Client API
+`https://CONNECT_IP_OR_DNS:8443/api/server/configuration`
+
+On the webpage, click the `Upload Icon` or `Choose a Report` input.
+
 ## Depdendencies
 - JavaScript
 	- [Vue.js](https://vuejs.org/)

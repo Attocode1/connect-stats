@@ -3,10 +3,18 @@ Vue.component('channel-table', {
     template:
     `<table class="table is-striped is-fullwidth is-hoverable is-bordered">
         <thead>
-            <tr class="has-background-success">    
-                <th class="has-text-white" v-bind:colspan="columns.length">{{ title }}: {{ channelGroup.length }}</th>
-            </tr>
             <tr class="has-background-grey-dark">    
+                <th class="has-text-white" v-bind:colspan="columns.length">
+                    {{ title }}: {{ channelGroup.length }}
+                    <a href="#top" class="has-text-white" aria-label="Back to Top of Page">
+                        <span class="icon is-pulled-right">
+                            <i class="fas fa-angle-up" aria-hidden="true"></i>
+                        </span>
+                    </a>
+                    </span>
+                </th>
+            </tr>
+            <tr class="has-background-grey">    
                 <th class="has-text-white" v-for="column in columns">{{ column }}</th>
             </tr>
         </thead>
@@ -29,8 +37,10 @@ Vue.component('table-row', {
         <td v-for="cell in cells">
             <span v-if="cell == 'backgroundColor'" class="tag has-text-black" v-bind:style="{ backgroundColor: row[cell]}">{{ row[cell] }}</span>
             <span v-else-if="cell == 'enabled' && row[cell]">Enabled</span>
-            <span v-else-if="cell == 'enabled' && !row[cell]" class="has-background-danger has-text-white">Not Enabled</span>
-            <span v-else-if="cell == 'messageStorageMode' && row['developmentStorage']" class="has-background-danger has-text-white">{{ channel.messageStorageMode[0].toUpperCase() + channel.messageStorageMode.slice(1) }}</span>
+            <span v-else-if="cell == 'enabled' && !row[cell]" class="has-background-info has-text-white">Not Enabled</span>
+            <span v-else-if="cell == 'messageStorageMode' && row['developmentStorage']" class="has-background-danger has-text-white">{{ row.messageStorageMode }}</span>
+            <span v-else-if="cell == 'pruneMetaData' && !row['hasPruning']" class="has-background-danger has-text-white">No Pruning</span>
+            <span v-else-if="cell == 'description' && !row['hasDescription']" class="has-background-danger has-text-white">No Description</span>
             <span v-else>{{ row[cell] }}</span>
         </td>
     </tr>
@@ -42,54 +52,13 @@ let app = new Vue({
     data: {
         serverSettings: {},
         groups: {
-            channels: {
-                label: 'Channels',
-                name: 'channels',
-                tds: ['sourceConnector', 'port', 'name', 'enabled', 'messageStorageMode', 'pruneMetaData', 'description'],
-                columns: ['Type', 'Port', 'Name', 'Enabled', 'Storage', 'Pruning (days)', 'Description'],
-                items: []
-            },channelGroups: {
-                label: 'Groups',
-                name: 'channelGroups',
-                tds: ['name', 'channelCount'],
-                columns: ['Name', 'Channels'],
-                items: []
-            },
-            channelTags: {
-                label: 'Tags',
-                name: 'channelTags',
-                tds: ['name', 'backgroundColor', 'channelCount'],
-                columns: ['Name', 'Color', 'Channels'],
-                items: []
-            },
-            activePorts: {
-                label: 'Ports',
-                name: 'activePorts',
-                tds: ['sourceConnector', 'port', 'name'],
-                columns: ['Type', 'Port', 'Name'],
-                items: []
-            },
-            noMetadataPruning: {
-                label: 'No Pruning',
-                name: 'noMetadataPruning',
-                tds: ['name'],
-                columns: ['Name'],
-                items: []
-            },
-            nonProductionStorage: {
-                label: 'Non-Production Storage',
-                name: 'nonProductionStorage',
-                tds: ['name'],
-                columns: ['Name'],
-                items: []
-            },
-            noDescription: {
-                label: 'No Description',
-                name: 'noDescription',
-                tds: ['name'],
-                columns: ['Name'],
-                items: []
-            }
+            channels: { label: 'Channels', name: 'channels', tds: ['sourceConnector', 'port', 'name', 'enabled', 'messageStorageMode', 'pruneMetaData', 'description'], columns: ['Type', 'Port', 'Name', 'Enabled', 'Storage', 'Pruning (days)', 'Description'], items: [] },
+            channelGroups: { label: 'Groups', name: 'channelGroups', tds: ['name', 'channelCount'], columns: ['Name', 'Channels'], items: [] },
+            channelTags: { label: 'Tags', name: 'channelTags', tds: ['name', 'backgroundColor', 'channelCount'], columns: ['Name', 'Color', 'Channels'], items: [] },
+            activePorts: { label: 'Ports', name: 'activePorts', tds: ['sourceConnector', 'port', 'name'], columns: ['Type', 'Port', 'Name'], items: [] },
+            noMetadataPruning: { label: 'No Pruning', name: 'noMetadataPruning', tds: ['name'], columns: ['Name'], items: [] },
+            nonProductionStorage: { label: 'Non-Production Storage', name: 'nonProductionStorage', tds: ['name'], columns: ['Name'], items: [] },
+            noDescription: { label: 'No Description', name: 'noDescription', tds: ['name'], columns: ['Name'], items: [] }
         },
         showMessage: false,
         notification: [],
@@ -111,6 +80,8 @@ let app = new Vue({
             }
 
             if(files.length == 1) {
+                NProgress.start();
+
                 let lastModified = files[0].lastModified;
                 let name = files[0].name;
                 let size = files[0].size;
@@ -163,7 +134,7 @@ let app = new Vue({
                     let oDom = oParser.parseFromString(e.target.result, 'application/xml');
                     this.parseXML(oDom);
                 } catch(error) {
-                    vm.setError('Malformed XML config', error);
+                    vm.setError('Error Parsing XML Export', error);
                 }
             }
 
@@ -302,7 +273,7 @@ let app = new Vue({
                         'id': this.getElements(channel, 'id')[0].innerHTML.toString(),
                         'name': name,
                         'prettyName': _.startCase(name),
-                        'messageStorageMode': _.lowerCase(this.getText(this.getElements(properties, 'messageStorageMode')[0], 'messageStorageMode')),
+                        'messageStorageMode': _.upperFirst(_.lowerCase(this.getText(this.getElements(properties, 'messageStorageMode')[0], 'messageStorageMode'))),
                         'developmentStorage': false, 
                         'hasPruning': false,
                         'pruneMetaData': pruneMetaData,
@@ -334,7 +305,7 @@ let app = new Vue({
                         activePorts.push(portObj);
                     }
                 
-                    if(channelObj.messageStorageMode.indexOf('development') > -1) {
+                    if(channelObj.messageStorageMode.indexOf('Development') > -1) {
                         channelObj.developmentStorage = true;
                         nonProductionStorage.push(channelObj);
                     }
@@ -375,6 +346,8 @@ let app = new Vue({
 
                 activePorts = _.sortBy(activePorts, ['type', 'port', 'name']);
                 vm.groups.activePorts.items = activePorts;
+
+                NProgress.done();
             }
         },
         getText(element, tagName) {
@@ -417,60 +390,19 @@ let app = new Vue({
             this.isLoading = false;
             this.isLoaded = false;
             this.setNotification(message, exception);
+            NProgress.done();
         },
         clearReport() {
             var data = {
                 serverSettings: {},
                 groups: {
-                    channels: {
-                        label: 'Channels',
-                        name: 'channels',
-                        tds: ['sourceConnector', 'port', 'name', 'enabled', 'messageStorageMode', 'pruneMetaData', 'description'],
-                        columns: ['Type', 'Port', 'Name', 'Enabled', 'Storage', 'Pruning (days)', 'Description'],
-                        items: []
-                    },
-                    channelGroups: {
-                        label: 'Groups',
-                        name: 'channelGroups',
-                        tds: ['name', 'channelCount'],
-                        columns: ['Name', 'Channels'],
-                        items: []
-                    },
-                    channelTags: {
-                        label: 'Tags',
-                        name: 'channelTags',
-                        tds: ['name', 'backgroundColor', 'channelCount'],
-                        columns: ['Name', 'Color', 'Channels'],
-                        items: []
-                    },
-                    activePorts: {
-                        label: 'Ports',
-                        name: 'activePorts',
-                        tds: ['sourceConnector', 'port', 'name'],
-                        columns: ['Type', 'Port', 'Name'],
-                        items: []
-                    },
-                    noMetadataPruning: {
-                        label: 'No Pruning',
-                        name: 'noMetadataPruning',
-                        tds: ['name'],
-                        columns: ['Name'],
-                        items: []
-                    },
-                    nonProductionStorage: {
-                        label: 'Non-Production Storage',
-                        name: 'nonProductionStorage',
-                        tds: ['name'],
-                        columns: ['Name'],
-                        items: []
-                    },
-                    noDescription: {
-                        label: 'No Description',
-                        name: 'noDescription',
-                        tds: ['name'],
-                        columns: ['Name'],
-                        items: []
-                    }
+                    channels: { label: 'Channels', name: 'channels', tds: ['sourceConnector', 'port', 'name', 'enabled', 'messageStorageMode', 'pruneMetaData', 'description'], columns: ['Type', 'Port', 'Name', 'Enabled', 'Storage', 'Pruning (days)', 'Description'], items: [] },
+                    channelGroups: { label: 'Groups', name: 'channelGroups', tds: ['name', 'channelCount'], columns: ['Name', 'Channels'], items: [] },
+                    channelTags: { label: 'Tags', name: 'channelTags', tds: ['name', 'backgroundColor', 'channelCount'], columns: ['Name', 'Color', 'Channels'], items: [] },
+                    activePorts: { label: 'Ports', name: 'activePorts', tds: ['sourceConnector', 'port', 'name'], columns: ['Type', 'Port', 'Name'], items: [] },
+                    noMetadataPruning: { label: 'No Pruning', name: 'noMetadataPruning', tds: ['name'], columns: ['Name'], items: [] },
+                    nonProductionStorage: { label: 'Non-Production Storage', name: 'nonProductionStorage', tds: ['name'], columns: ['Name'], items: [] },
+                    noDescription: { label: 'No Description', name: 'noDescription', tds: ['name'], columns: ['Name'], items: [] }
                 },
                 showMessage: false,
                 notification: [],

@@ -1,7 +1,7 @@
 # Connect Stats
 Shows current Connect inventory, using a Connect Configuration.
 
-![Image of Sample Report](assets/images/sample-report.png | width=100)
+<a href="assets/images/sample-report.png"><img src="assets/images/sample-report.png" height="500"/></a>
 
 ## Currently Displaying
 - Channels

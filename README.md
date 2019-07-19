@@ -1,5 +1,5 @@
 # Connect Stats
-Shows current Connect inventory, using a Connect Backup Config file.
+Shows current Connect inventory, using a Connect Configuration.
 
 Currently Displays:
 
@@ -30,7 +30,9 @@ Currently Displays:
 	- Channel Name
 
 ## Usage
-Export Connect Configuration using one of the following:
+Click the `Upload Icon` or `Choose a Report` input to select a Connect Configuration.
+
+Connect Configurations can be obtained using one of the following:
 
 ### Connect Command Line Interface (CLI)
 `exportcfg PATH-TO-FILE`
@@ -42,8 +44,6 @@ Export Connect Configuration using one of the following:
 
 ### Connect Client API
 `https://CONNECT_IP_OR_DNS:8443/api/server/configuration`
-
-On the webpage, click the `Upload Icon` or `Choose a Report` input.
 
 ## Depdendencies
 - JavaScript

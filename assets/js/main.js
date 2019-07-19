@@ -1,9 +1,12 @@
 Vue.component('channel-table', {
-    props: ['channel-group', 'columns', 'cells'],
+    props: ['channel-group', 'columns', 'cells', 'title'],
     template:
-    `<table class="table is-striped is-fullwidth is-hoverable">
+    `<table class="table is-striped is-fullwidth is-hoverable is-bordered">
         <thead>
-            <tr class="has-background-grey-dark">
+            <tr class="has-background-success">    
+                <th class="has-text-white" v-bind:colspan="columns.length">{{ title }}: {{ channelGroup.length }}</th>
+            </tr>
+            <tr class="has-background-grey-dark">    
                 <th class="has-text-white" v-for="column in columns">{{ column }}</th>
             </tr>
         </thead>
@@ -24,7 +27,10 @@ Vue.component('table-row', {
     template: `
     <tr>
         <td v-for="cell in cells">
-            <span v-if="cell == 'backgroundColor'" class="tag has-text-black" v-bind:style="{ backgroundColor: row[cell]}"></span>
+            <span v-if="cell == 'backgroundColor'" class="tag has-text-black" v-bind:style="{ backgroundColor: row[cell]}">{{ row[cell] }}</span>
+            <span v-else-if="cell == 'enabled' && row[cell]">Enabled</span>
+            <span v-else-if="cell == 'enabled' && !row[cell]" class="has-background-danger has-text-white">Not Enabled</span>
+            <span v-else-if="cell == 'messageStorageMode' && row['developmentStorage']" class="has-background-danger has-text-white">{{ channel.messageStorageMode[0].toUpperCase() + channel.messageStorageMode.slice(1) }}</span>
             <span v-else>{{ row[cell] }}</span>
         </td>
     </tr>
@@ -34,30 +40,59 @@ Vue.component('table-row', {
 let app = new Vue({
     el: '#app',
     data: {
-        columns: {
-            noMetadataPruning: ['Name', 'Actual Name'],
-            nonProductionStorage: ['Name', 'Actual Name'],
-            noDescription: ['Name', 'Actual Name'],
-            channelGroups: ['Name', 'Channels'],
-            channelTags: ['Name', 'Color', 'Channel Count']
-        },
-        tds: {
-            noMetadataPruning: ['prettyName', 'name'],
-            nonProductionStorage: ['prettyName', 'name'],
-            noDescription: ['prettyName', 'name'],
-            channelGroups: ['name', 'channelCount'],
-            channelTags: ['name', 'backgroundColor', 'channelCount']
-        },
         serverSettings: {},
-        channelTags: [],
-        channelGroups: [],
-        noMetadataPruning: [],
-        nonProductionStorage: [],
-        channels: [],
-        noDescription: [],
-        alerts: [],
-        uploadError: false,
-        errorMessage: '',
+        groups: {
+            channels: {
+                label: 'Channels',
+                name: 'channels',
+                tds: ['sourceConnector', 'port', 'name', 'enabled', 'messageStorageMode', 'pruneMetaData', 'description'],
+                columns: ['Type', 'Port', 'Name', 'Enabled', 'Storage', 'Pruning (days)', 'Description'],
+                items: []
+            },channelGroups: {
+                label: 'Groups',
+                name: 'channelGroups',
+                tds: ['name', 'channelCount'],
+                columns: ['Name', 'Channels'],
+                items: []
+            },
+            channelTags: {
+                label: 'Tags',
+                name: 'channelTags',
+                tds: ['name', 'backgroundColor', 'channelCount'],
+                columns: ['Name', 'Color', 'Channels'],
+                items: []
+            },
+            activePorts: {
+                label: 'Ports',
+                name: 'activePorts',
+                tds: ['sourceConnector', 'port', 'name'],
+                columns: ['Type', 'Port', 'Name'],
+                items: []
+            },
+            noMetadataPruning: {
+                label: 'No Pruning',
+                name: 'noMetadataPruning',
+                tds: ['name'],
+                columns: ['Name'],
+                items: []
+            },
+            nonProductionStorage: {
+                label: 'Non-Production Storage',
+                name: 'nonProductionStorage',
+                tds: ['name'],
+                columns: ['Name'],
+                items: []
+            },
+            noDescription: {
+                label: 'No Description',
+                name: 'noDescription',
+                tds: ['name'],
+                columns: ['Name'],
+                items: []
+            }
+        },
+        showMessage: false,
+        notification: [],
         currentReport: {
             lastModified: '',
             name: 'Choose a report…',
@@ -66,48 +101,6 @@ let app = new Vue({
         },
         isLoaded: false,
         isLoading: false
-    },
-    mounted() {
-        if(localStorage.getItem('currentReport')) {
-            let localCurrentReport = JSON.parse(localStorage.getItem('currentReport'));
-            
-            this.currentReport.lastModified = localCurrentReport.lastModified;
-            this.currentReport.name = localCurrentReport.name;
-            this.currentReport.size = localCurrentReport.size;
-            this.currentReport.type = localCurrentReport.type;
-        }
-        
-        if(localStorage.getItem('serverSettings')) {
-            this.serverSettings = JSON.parse(localStorage.getItem('serverSettings'));
-        }
-        
-        if(localStorage.getItem('columns')) {
-            this.columns = JSON.parse(localStorage.getItem('columns'));	
-        }
-        
-        if(localStorage.getItem('channelGroups')) {
-            this.channelGroups = JSON.parse(localStorage.getItem('channelGroups'));
-        }
-        
-        if(localStorage.getItem('noMetadataPruning')) {
-            this.noMetadataPruning = JSON.parse(localStorage.getItem('noMetadataPruning'));
-        }
-        
-        if(localStorage.getItem('nonProductionStorage')) {
-            this.nonProductionStorage = JSON.parse(localStorage.getItem('nonProductionStorage'));
-        }
-        
-        if(localStorage.getItem('channels')) {
-            this.channels = JSON.parse(localStorage.getItem('channels'));
-        }
-        
-        if(localStorage.getItem('noDescription')) {
-            this.noDescription = JSON.parse(localStorage.getItem('noDescription'));
-        }
-        
-        if(localStorage.getItem('alerts')) {
-            this.alerts = JSON.parse(localStorage.getItem('alerts'));
-        }
     },
     methods: {
         onFileChange(e) {
@@ -141,199 +134,34 @@ let app = new Vue({
                     this.currentReport.size = size;
                     this.currentReport.type = type;
                 }
-                
-                if(type == 'application/json') {
+
+                this.clearReport();
+
+                if(_.isEqual(type, 'application/json')) {
                     this.loadJSONData(files[0]);
-                } else if(type == 'text/xml') {
+                } else if(_.isEqual(type, 'text/xml')) {
                     this.loadXMLData(files[0]);
                 }
             }
         },
         loadXMLData(file) {
             let vm = this;
-
             let reader = new FileReader();
 
             reader.onloadstart = () => {
+                vm.isLoaded = false;
                 vm.isLoading = true;
             }
 
             reader.onloadend = () => {
                 vm.isLoading = false;
-                vm.isLoaded = true;
             }
 
             reader.onload = (e) => {
                 try {
                     let oParser = new DOMParser();
-                    let oDom = oParser.parseFromString(e.target.result, "application/xml");
-                    let config = this.getElements(oDom, 'serverConfiguration')[0];
-
-                    let serverSettings = this.getElements(config, 'serverSettings')[0];
-                    
-                    vm.serverSettings = {
-                        serverName: this.getElements(serverSettings, 'serverName')[0].innerHTML.toString(),
-                        version: config.getAttribute('version').toString(),
-                        queueBufferSize: this.getElements(serverSettings, 'queueBufferSize')[0].innerHTML.toString()
-                    };
-
-                    let alertsXML = this.getElements(this.getElements(config, 'alerts')[0], 'alertModel');
-                    let alerts = [];
-
-                    for(let alert of alertsXML) {
-                        var alertObj = {
-                            'id': this.getElements(alert, 'id')[0].innerHTML.toString(),
-                            'name': this.getElements(alert, 'name')[0].innerHTML.toString(),
-                            'enabled': this.getElements(alert, 'enabled')[0].innerHTML.toString()
-                        };
-                    
-                        alerts.push(alertObj);
-                    }
-
-                    alerts.sort(compareNames);
-                    vm.alerts = alerts;
-
-                    let channelGroupsXML = this.getElements(this.getElements(config, 'channelGroups')[0], 'channelGroup');
-                    let channelGroups = [];
-
-                    for(let channelGroup of channelGroupsXML) {
-                        var channelGroupObj = {
-                            'id': this.getElements(channelGroup, 'id')[0].innerHTML.toString(),
-                            'name': this.getElements(channelGroup, 'name')[0].innerHTML.toString(),
-                            'channelCount': this.getElements(this.getElements(channelGroup, 'channels')[0], 'channel').length
-                        };
-                    
-                        channelGroups.push(channelGroupObj);
-                    }
-
-                    channelGroups.sort(compareNames);
-                    vm.channelGroups = channelGroups;
-                    
-                    let channelTagsXML = this.getElements(this.getElements(config, 'channelTags')[0], 'channelTag');
-                    let channelTags = [];
-
-                    for(let channelTag of channelTagsXML) {
-                        let bgColor = this.getElements(channelTag, 'backgroundColor')[0];
-                        let red = this.getElements(bgColor, 'red')[0].innerHTML.toString(); 
-                        let green = this.getElements(bgColor, 'green')[0].innerHTML.toString();
-                        let blue = this.getElements(bgColor, 'blue')[0].innerHTML.toString();
-                        let alpha = this.getElements(bgColor, 'alpha')[0].innerHTML.toString();
-                    
-                        let channelTagObj = {
-                            'id': this.getElements(channelTag, 'id')[0].innerHTML.toString(),
-                            'name': this.getElements(channelTag, 'name')[0].innerHTML.toString(),
-                            'channelCount': this.getElements(this.getElements(channelTag, 'channelIds')[0], 'string').length,
-                            'backgroundColor': `rgb(${red},${green},${blue},${alpha})`
-                        };
-                    
-                        channelTags.push(channelTagObj);
-                    }
-
-                    channelTags.sort(compareNames);
-                    vm.channelTags = channelTags;
-
-                    let allChannelsXML = this.getElements(config, 'channels');
-                    let channelsXML;
-                    let channels = [];
-                    let nonProductionStorage = [];
-                    let noMetadataPruning = [];
-                    let noDescription = [];
-
-                    for(let allChannel of allChannelsXML) {
-                        if(allChannel.parentNode.localName.toString() == "serverConfiguration") {
-                            channelsXML = this.getElements(allChannel, 'channel');
-                        }
-                    }
-
-                    for(let channel of channelsXML) {
-                        //this.getElements(channel, 'name');
-                        let name = this.getElements(channel, 'name')[0].innerHTML.toString();
-                        let properties;
-
-                        for(let prop of this.getElements(channel, 'properties')) {
-                            if(prop.parentNode.localName.toString() == "channel") {
-                                properties = prop;
-                            }
-                        }
-
-                        let metadata = this.getElements(this.getElements(channel, 'exportData')[0], 'metadata')[0];
-                        let description = this.getElements(channel, 'description')[0].innerHTML.toString();
-
-                        let pruningSettings = this.getElements(metadata, 'pruningSettings');
-                        let pruneMetaData = '';
-                        let pruneContentDays = '';
-
-                        if(pruningSettings.length == 1) {
-                            pruningSettings = pruningSettings[0];
-
-                            pruneMetaData = this.getElements(pruningSettings, 'pruneMetaDataDays');
-                            if(pruneMetaData.length == 1) {
-                                pruneMetaData = pruneMetaData[0].innerHTML.toString();
-                            } else {
-                                pruneMetaData = ''
-                            }
-
-                            pruneContentDays = this.getElements(pruningSettings, 'pruneContentDays');
-                            if(pruneContentDays.length == 1) {
-                                pruneContentDays = pruneContentDays[0].innerHTML.toString();
-                            } else {
-                                pruneContentDays = ''
-                            }
-                        }
-                    
-                        var channelObj = {
-                            'id': this.getElements(channel, 'id')[0].innerHTML.toString(),
-                            'name': name,
-                            'prettyName': _.startCase(name),
-                            'messageStorageMode': this.getElements(properties, 'messageStorageMode')[0].innerHTML.toString().toLowerCase(),
-                            'developmentStorage': false, 
-                            'hasPruning': false,
-                            'pruneMetaData': pruneMetaData,
-                            'pruneContent': pruneContentDays,
-                            'hasDescription': false,
-                            'description': description.substring(0, 25),
-                            'isDanger': false,
-                            'enabled': (this.getElements(metadata, 'enabled')[0].innerHTML.toString() == 'true')
-                        };
-                    
-                        if(channelObj.messageStorageMode.indexOf('development') > -1) {
-                            channelObj.developmentStorage = true;
-                            nonProductionStorage.push(channelObj);
-                        }
-                    
-                        if(channelObj.pruneMetaData == '') {
-                            noMetadataPruning.push(channelObj);
-                        } else {
-                            channelObj.hasPruning = true;
-                        }
-                    
-                        if(channelObj.description != '') {
-                            channelObj.description += ' ...';
-                            channelObj.hasDescription = true;
-                        }
-                    
-                        if(!channelObj.hasDescription) {
-                            noDescription.push(channelObj);
-                        }
-                    
-                        if(!channelObj.hasPruning && !channelObj.hasDescription) {
-                            channelObj.isDanger = true;
-                        }
-                    
-                        channels.push(channelObj);
-                    }
-
-                    nonProductionStorage.sort(compareNames);
-                    noDescription.sort(compareNames);
-                    noMetadataPruning.sort(compareNames);
-                    channels.sort(compareNames);
-
-                    vm.channels = channels;
-                    vm.nonProductionStorage = nonProductionStorage;
-                    vm.noDescription = noDescription;
-                    vm.noMetadataPruning = noMetadataPruning;
-
-                    vm.uploadError = false;
+                    let oDom = oParser.parseFromString(e.target.result, 'application/xml');
+                    this.parseXML(oDom);
                 } catch(error) {
                     vm.setError('Malformed XML config', error);
                 }
@@ -353,7 +181,7 @@ let app = new Vue({
                         vm[key] = jsonData[key];
                     });
 
-                    vm.uploadError = false;
+                    vm.showMessage = false;
                     vm.isLoaded = true;
                     vm.persist();
                 } catch(error) {
@@ -363,16 +191,202 @@ let app = new Vue({
 
             reader.readAsText(file);
         },
-        persist() {
-            localStorage.setItem('currentReport', JSON.stringify(this.currentReport));
-            localStorage.setItem('serverSettings', JSON.stringify(this.serverSettings));
-            localStorage.setItem('channelTags', JSON.stringify(this.channelTags));
-            localStorage.setItem('channelGroups', JSON.stringify(this.channelGroups));
-            localStorage.setItem('noMetadataPruning', JSON.stringify(this.noMetadataPruning));
-            localStorage.setItem('nonProductionStorage', JSON.stringify(this.nonProductionStorage));
-            localStorage.setItem('channels', JSON.stringify(this.channels));
-            localStorage.setItem('noDescription', JSON.stringify(this.noDescription));
-            localStorage.setItem('alerts', JSON.stringify(this.alerts));
+        parseXML(document) {
+            if(!_.isNull(document) && !_.isUndefined(document)) {
+                let vm = this;
+                vm.isLoaded = true;
+                let config = this.getElements(document, 'serverConfiguration')[0];
+                let serverSettings = this.getElements(config, 'serverSettings')[0];
+
+                vm.serverSettings = {
+                    serverName: this.getText(this.getElements(serverSettings, 'serverName')[0], 'serverName'),
+                    version: config.getAttribute('version').toString(),
+                    queueBufferSize: this.getText(this.getElements(serverSettings, 'queueBufferSize')[0], 'queueBufferSize')
+                };
+
+                let channelGroupsXML = this.getElements(this.getElements(config, 'channelGroups')[0], 'channelGroup');
+                let channelGroups = [];
+
+                for(let channelGroup of channelGroupsXML) {
+                    var channelGroupObj = {
+                        'id': this.getText(this.getElements(channelGroup, 'id')[0], 'id'),
+                        'name': this.getText(this.getElements(channelGroup, 'name')[0], 'name'),
+                        'channelCount': this.getElements(this.getElements(channelGroup, 'channels')[0], 'channel').length
+                    };
+                
+                    channelGroups.push(channelGroupObj);
+                }
+
+                channelGroups = _.sortBy(channelGroups, ['name']);
+                vm.groups.channelGroups.items = channelGroups;
+                
+                let channelTagsXML = this.getElements(this.getElements(config, 'channelTags')[0], 'channelTag');
+                let channelTags = [];
+
+                for(let channelTag of channelTagsXML) {
+                    let bgColor = this.getElements(channelTag, 'backgroundColor')[0];
+                    let red = this.getText(this.getElements(bgColor, 'red')[0], 'red'); 
+                    let green = this.getText(this.getElements(bgColor, 'green')[0], 'green');
+                    let blue = this.getText(this.getElements(bgColor, 'blue')[0], 'blue');
+                    let alpha = this.getText(this.getElements(bgColor, 'alpha')[0], 'alpha');
+                
+                    let channelTagObj = {
+                        'id': this.getText(this.getElements(channelTag, 'id')[0], 'id'),
+                        'name': this.getText(this.getElements(channelTag, 'name')[0], 'name'),
+                        'channelCount': this.getElements(this.getElements(channelTag, 'channelIds')[0], 'string').length,
+                        'backgroundColor': `rgb(${red},${green},${blue},${alpha})`
+                    };
+                
+                    channelTags.push(channelTagObj);
+                }
+
+                channelTags = _.sortBy(channelTags, ['name']);
+                vm.groups.channelTags.items = channelTags;
+
+                let allChannelsXML = this.getElements(config, 'channels');
+                let channelsXML;
+                let channels = [];
+                let nonProductionStorage = [];
+                let noMetadataPruning = [];
+                let noDescription = [];
+                let activePorts = [];
+
+                for(let allChannel of allChannelsXML) {
+                    if(_.isEqual(allChannel.parentNode.localName.toString(), 'serverConfiguration')) {
+                        channelsXML = this.getElements(allChannel, 'channel');
+                    }
+                }
+
+                for(let channel of channelsXML) {
+                    let name = this.getText(this.getElements(channel, 'name')[0], 'name');
+                    let properties;
+
+                    for(let prop of this.getElements(channel, 'properties')) {
+                        if(_.isEqual(prop.parentNode.localName.toString(), 'channel')) {
+                            properties = prop;
+                        }
+                    }
+
+                    let metadata = this.getElements(this.getElements(channel, 'exportData')[0], 'metadata')[0];
+                    let description = this.getElements(channel, 'description')[0].innerHTML.toString();
+
+                    let pruningSettings = this.getElements(metadata, 'pruningSettings');
+                    let pruneMetaData = '';
+                    let pruneContentDays = '';
+
+                    if(pruningSettings.length == 1) {
+                        pruningSettings = pruningSettings[0];
+
+                        pruneMetaData = this.getElements(pruningSettings, 'pruneMetaDataDays');
+                        if(pruneMetaData.length == 1) {
+                            pruneMetaData = pruneMetaData[0].innerHTML.toString();
+                        } else {
+                            pruneMetaData = ''
+                        }
+
+                        pruneContentDays = this.getElements(pruningSettings, 'pruneContentDays');
+                        if(pruneContentDays.length == 1) {
+                            pruneContentDays = pruneContentDays[0].innerHTML.toString();
+                        } else {
+                            pruneContentDays = ''
+                        }
+                    }
+
+                    let sourceConnector = this.getElements(channel, 'sourceConnector')[0];
+                    let sourceProperties = this.getElements(sourceConnector, 'properties')[0];
+                    
+                    let connectorType = sourceProperties.getAttribute('class').toString();
+                    connectorType = _.upperCase(_.split(connectorType, '.', 5).pop());
+                
+                    var channelObj = {
+                        'id': this.getElements(channel, 'id')[0].innerHTML.toString(),
+                        'name': name,
+                        'prettyName': _.startCase(name),
+                        'messageStorageMode': _.lowerCase(this.getText(this.getElements(properties, 'messageStorageMode')[0], 'messageStorageMode')),
+                        'developmentStorage': false, 
+                        'hasPruning': false,
+                        'pruneMetaData': pruneMetaData,
+                        'pruneContent': pruneContentDays,
+                        'hasDescription': false,
+                        'sourceConnector': connectorType,
+                        'description': description.substring(0, 25),
+                        'host': '',
+                        'port': '',
+                        'isDanger': false,
+                        'enabled': (this.getText(this.getElements(metadata, 'enabled')[0], 'enabled') == 'true')
+                    };
+
+                    if(_.includes(['TCP', 'HTTP'], connectorType)) {
+                        let listenerProperties = this.getElements(sourceProperties, 'listenerConnectorProperties')[0];
+                        let host = this.getText(this.getElements(listenerProperties, 'host')[0], 'host');
+                        let port = this.getText(this.getElements(listenerProperties, 'port')[0], 'port');
+
+                        channelObj.host = host;
+                        channelObj.port = port;
+
+                        let portObj = {
+                            port: port,
+                            name: channelObj.name,
+                            enabled: channelObj.enabled,
+                            sourceConnector: channelObj.sourceConnector
+                        }
+                        
+                        activePorts.push(portObj);
+                    }
+                
+                    if(channelObj.messageStorageMode.indexOf('development') > -1) {
+                        channelObj.developmentStorage = true;
+                        nonProductionStorage.push(channelObj);
+                    }
+                
+                    if(channelObj.pruneMetaData == '') {
+                        noMetadataPruning.push(channelObj);
+                    } else {
+                        channelObj.hasPruning = true;
+                    }
+                
+                    if(channelObj.description != '') {
+                        channelObj.description += ' ...';
+                        channelObj.hasDescription = true;
+                    }
+                
+                    if(!channelObj.hasDescription) {
+                        noDescription.push(channelObj);
+                    }
+                
+                    if(!channelObj.hasPruning && !channelObj.hasDescription) {
+                        channelObj.isDanger = true;
+                    }
+                
+                    channels.push(channelObj);
+                }
+
+                nonProductionStorage = _.sortBy(nonProductionStorage, ['name']);
+                vm.groups.nonProductionStorage.items = nonProductionStorage;
+                
+                noDescription = _.sortBy(noDescription, ['name']);
+                vm.groups.noDescription.items = noDescription;
+                
+                noMetadataPruning = _.sortBy(noMetadataPruning, ['name']);
+                vm.groups.noMetadataPruning.items = noMetadataPruning;
+
+                channels = _.sortBy(channels, ['name']);
+                vm.groups.channels.items = channels;
+
+                activePorts = _.sortBy(activePorts, ['type', 'port', 'name']);
+                vm.groups.activePorts.items = activePorts;
+            }
+        }
+        getText(element, tagName) {
+            if(!_.isNull(element) && !_.isUndefined(element) && !isBlank(tagName)) {
+                try {
+                    return element.innerHTML.toString();
+                } catch(error) {
+                    this.setError(`Could not get text (${tagName}):`, error);
+                }
+            } else {
+                return '';
+            }
         },
         getElements(document, name) {
             if(!isBlank(name)) {
@@ -385,20 +399,92 @@ let app = new Vue({
                 return null;
             }
         },
+        setNotification(msg, exp) {
+            let msgText = 'Error message not passed';
+
+            if(!isBlank(msg)) {
+                msgText = `<strong>${msg}</strong><br/>`;
+            }
+
+            if(!_.isNull(exp) && !_.isUndefined(exp)) {
+                msgText = `${msgText}Line: ${exp.lineNumber}<br/>${exp.toString()}`;
+            }
+
+            this.notification.push(msgText);
+        },
         setError(message, exception) {
-            let errMessage = 'Error message not passed';
-
-            if(!isBlank(message)) {
-                errMessage = `<strong>${message}:</strong><br/>`;
-            }
-
-            if(!_.isNull(exception)) {
-                errMessage = `${errMessage}Line: ${exception.lineNumber}<br/>${exception.toString()}`;
-            }
-
-            this.uploadError = true;
+            this.showMessage = true;
             this.isLoading = false;
-            this.errorMessage = errMessage;
+            this.isLoaded = false;
+            this.setNotification(message, exception);
+        },
+        clearReport() {
+            var data = {
+                serverSettings: {},
+                groups: {
+                    channels: {
+                        label: 'Channels',
+                        name: 'channels',
+                        tds: ['sourceConnector', 'port', 'name', 'enabled', 'messageStorageMode', 'pruneMetaData', 'description'],
+                        columns: ['Type', 'Port', 'Name', 'Enabled', 'Storage', 'Pruning (days)', 'Description'],
+                        items: []
+                    },
+                    channelGroups: {
+                        label: 'Groups',
+                        name: 'channelGroups',
+                        tds: ['name', 'channelCount'],
+                        columns: ['Name', 'Channels'],
+                        items: []
+                    },
+                    channelTags: {
+                        label: 'Tags',
+                        name: 'channelTags',
+                        tds: ['name', 'backgroundColor', 'channelCount'],
+                        columns: ['Name', 'Color', 'Channels'],
+                        items: []
+                    },
+                    activePorts: {
+                        label: 'Ports',
+                        name: 'activePorts',
+                        tds: ['sourceConnector', 'port', 'name'],
+                        columns: ['Type', 'Port', 'Name'],
+                        items: []
+                    },
+                    noMetadataPruning: {
+                        label: 'No Pruning',
+                        name: 'noMetadataPruning',
+                        tds: ['name'],
+                        columns: ['Name'],
+                        items: []
+                    },
+                    nonProductionStorage: {
+                        label: 'Non-Production Storage',
+                        name: 'nonProductionStorage',
+                        tds: ['name'],
+                        columns: ['Name'],
+                        items: []
+                    },
+                    noDescription: {
+                        label: 'No Description',
+                        name: 'noDescription',
+                        tds: ['name'],
+                        columns: ['Name'],
+                        items: []
+                    }
+                },
+                showMessage: false,
+                notification: [],
+                currentReport: {
+                    lastModified: '',
+                    name: 'Choose a report…',
+                    size: '',
+                    type: ''
+                }
+            }
+
+            Object.keys(data).forEach(key => {
+                this[key] = data[key];
+            });
         }
     }
 });

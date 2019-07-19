@@ -1,7 +1,7 @@
 <!DOCTYPE html>
 <html lang="en">
     <head>
-        <title>NextGen Connect Report</title>
+        <title>Connect Report</title>
         <meta charset="utf-8"/>
         <meta name="viewport" content="width=device-width, initial-scale=1"/>
         <link rel="stylesheet" type="text/css" href="./assets/css/bulma.min.css"/>
@@ -23,174 +23,28 @@
                     </label>
                 </div>
                 <br/>
-                <template v-if="uploadError">
-                    <div class="notification is-warning" v-html="errorMessage">
+                <template v-if="showMessage">
+                    <div class="notification is-warning" v-html="notification">
                         <br/>
                     </div>
                 </template>
-                <progress class="progress is-large is-info" max="100" v-if="isLoading">60%</progress>
                 <template v-if="isLoaded">
                     <h1 class="title" v-if="serverSettings.serverName">{{ serverSettings.serverName }}</h1>
                     <h1 class="title" v-else>No Server Name</h1>
-                    <h2 class="subtitle">NextGen Connect {{ serverSettings.version }}</h2>
-                    <nav class="level">
-                        <div class="level-item has-text-centered">
-                            <div>
-                            <p class="heading">Channels</p>
-                            <a href="#channels"><p class="title">{{ channels.length }}</p></a>
-                            </div>
-                        </div>
-                        <div class="level-item has-text-centered">
-                            <div>
-                            <p class="heading">Channels Enabled</p>
-                            <a href="#channels"><p class="title">{{ channels.filter(channel => channel.enabled).length }}</p></a>
-                            </div>
-                        </div>
-                        <div class="level-item has-text-centered">
-                            <div>
-                            <p class="heading">Channel Groups</p>
-                            <a href="#channelGroups"><p class="title">{{ channelGroups.length }}</p></a>
-                            </div>
-                        </div>
-                        <div class="level-item has-text-centered">
-                            <div>
-                            <p class="heading">Channel Tags</p>
-                            <a href="#channelTags"><p class="title">{{ channelTags.length }}</p></a>
-                            </div>
-                        </div>
-                        <div class="level-item has-text-centered">
-                            <div>
-                            <p class="heading">Pruning Disabled</p>
-                            <a href="#noPruning"><p class="title">{{ noMetadataPruning.length }}</p></a>
-                            </div>
-                        </div>
-                        <div class="level-item has-text-centered">
-                            <div>
-                            <p class="heading">Non-Production Storage</p>
-                            <a href="#noStorage"><p class="title">{{ nonProductionStorage.length }}</p></a>
-                            </div>
-                        </div>
-                        <div class="level-item has-text-centered">
-                            <div>
-                            <p class="heading">No Description</p>
-                            <a href="#noDescription"><p class="title">{{ noDescription.length }}</p></a>
-                            </div>
-                        </div>
-                    </nav>
-                    <template v-if="channelGroups.length > 0">
-                        <div class="columns">
-                            <div class="column">
-                                <div id="channelGroups" class="tags has-addons">
-                                    <span class="tag is-dark is-large">Channel Groups</span>
-                                    <span class="tag is-info is-large">{{ channelGroups.length }}</span>
+                    <h2 class="subtitle">Version {{ serverSettings.version }}</h2>
+                    <template>
+                        <nav class="level">
+                            <div class="level-item has-text-centered" v-for="group in groups">
+                                <div>
+                                    <p class="heading">{{ group.label }}</p>
+                                    <a v-bind:href="'#' + group.name"><p class="title">{{ group.items.length }}</p></a>
                                 </div>
                             </div>
-                            <div class="column">
-                                <a href="#top"><span class="tag is-light is-large is-pulled-right">Back to Top</span></a>
-                            </div>
-                        </div>
-                        <channel-table v-bind:channel-group="channelGroups" v-bind:columns="columns.channelGroups" v-bind:cells="tds.channelGroups"></channel-table>
+                        </nav>
                     </template>
-                    <template v-if="channelTags.length > 0">
-                        <div class="columns">
-                            <div class="column">
-                                <div id="channelTags" class="tags has-addons">
-                                    <span class="tag is-dark is-large">Channel Tags</span>
-                                    <span class="tag is-info is-large">{{ channelTags.length }}</span>
-                                </div>
-                            </div>
-                            <div class="column">
-                                <a href="#top"><span class="tag is-light is-large is-pulled-right">Back to Top</span></a>
-                            </div>
-                        </div>
-                        <channel-table v-bind:channel-group="channelTags" v-bind:columns="columns.channelTags" v-bind:cells="tds.channelTags"></channel-table>
+                    <template v-for="group in groups">
+                        <channel-table v-bind:channel-group="group.items" v-bind:id="group.name" v-bind:title="group.label" v-bind:columns="group.columns" v-bind:cells="group.tds"></channel-table>
                     </template>
-                    <template v-if="noMetadataPruning.length > 0">
-                        <div class="columns">
-                            <div class="column">
-                                <div id="noPruning" class="tags has-addons">
-                                    <span class="tag is-dark is-large">No Pruning Enabled</span>
-                                    <span class="tag is-info is-large">{{ noMetadataPruning.length }}</span>
-                                </div>
-                            </div>
-                            <div class="column">
-                                <a href="#top"><span class="tag is-light is-large is-pulled-right">Back to Top</span></a>
-                            </div>
-                        </div>
-                        <channel-table v-bind:channel-group="noMetadataPruning" v-bind:columns="columns.noMetadataPruning" v-bind:cells="tds.noMetadataPruning"></channel-table>
-                    </template>
-                    <template v-if="nonProductionStorage.length > 0">
-                        <div class="columns">
-                            <div class="column">
-                                <div id="noStorage" class="tags has-addons">
-                                    <span class="tag is-dark is-large">Development Storage</span>
-                                    <span class="tag is-info is-large">{{ nonProductionStorage.length }}</span>
-                                </div>
-                            </div>
-                            <div class="column">
-                                <a href="#top"><span class="tag is-light is-large is-pulled-right">Back to Top</span></a>
-                            </div>
-                        </div>
-                        <channel-table v-bind:channel-group="nonProductionStorage" v-bind:columns="columns.nonProductionStorage" v-bind:cells="tds.nonProductionStorage"></channel-table>
-                    </template>
-                    <template v-if="noDescription.length > 0">
-                        <div class="columns">
-                            <div class="column">
-                                <div id="noDescription" class="tags has-addons">
-                                    <span class="tag is-dark is-large">No Descriptions</span>
-                                    <span class="tag is-info is-large">{{ noDescription.length }}</span>
-                                </div>
-                            </div>
-                            <div class="column">
-                                <a href="#top"><span class="tag is-light is-large is-pulled-right">Back to Top</span></a>
-                            </div>
-                        </div>
-                        <channel-table v-bind:channel-group="noDescription" v-bind:columns="columns.noDescription" v-bind:cells="tds.noDescription"></channel-table>
-                    </template>
-                    <div class="columns">
-                        <div class="column">
-                            <div id="channels" class="tags has-addons">
-                                <span class="tag is-dark is-large">All Channels</span>
-                                <span class="tag is-info is-large">{{ channels.length }}</span>
-                            </div>
-                        </div>
-                        <div class="column">
-                            <a href="#top"><span class="tag is-light is-large is-pulled-right">Back to Top</span></a>
-                        </div>
-                    </div>
-                    <table class="table is-striped is-fullwidth is-hoverable content">
-                        <thead>
-                            <tr class="has-background-grey-dark">
-                                <th class="has-text-white">Name</th>
-                                <th class="has-text-white">Enabled</th>
-                                <th class="has-text-white">Storage</th>
-                                <th class="has-text-white">Pruning (days)</th>
-                                <th class="has-text-white">Description</th>
-                            </tr>
-                        </thead>
-                        <tbody class="content is-small">
-                            <tr v-for="channel in channels">
-                                <td>{{ channel.prettyName }}</td>
-                                <td v-if="channel.enabled">Enabled</td>
-                                <td v-bind:class="{ 'has-background-info': !channel.enabled }" v-else>Not Enabled</td>
-                                <td v-bind:class="{ 'has-background-danger': channel.developmentStorage }">
-                                    {{ channel.messageStorageMode[0].toUpperCase() + channel.messageStorageMode.slice(1) }}
-                                </td>
-                                <td v-bind:class="{ 'has-background-danger': !channel.hasPruning }" v-if="channel.hasPruning">
-                                    {{ channel.pruneMetaData }}
-                                </td>
-                                <td v-bind:class="{ 'has-background-danger': !channel.hasPruning }" v-else>
-                                    No Pruning
-                                </td>
-                                <td v-bind:class="{ 'has-background-danger': !channel.hasDescription }" v-if="channel.hasDescription">
-                                    {{ channel.description }}
-                                </td>
-                                <td v-bind:class="{ 'has-background-danger': !channel.hasDescription }" v-else>
-                                    No Description
-                                </td>
-                            </tr>
-                        </tbody>
-                    </table>
                 </template>
             </div>
         </section>

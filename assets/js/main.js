@@ -376,7 +376,7 @@ let app = new Vue({
                 activePorts = _.sortBy(activePorts, ['type', 'port', 'name']);
                 vm.groups.activePorts.items = activePorts;
             }
-        }
+        },
         getText(element, tagName) {
             if(!_.isNull(element) && !_.isUndefined(element) && !isBlank(tagName)) {
                 try {

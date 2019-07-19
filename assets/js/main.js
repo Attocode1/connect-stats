@@ -64,7 +64,7 @@ let app = new Vue({
         notification: [],
         currentReport: {
             lastModified: '',
-            name: 'Choose a report…',
+            name: 'Choose a Configuartion File…',
             size: '',
             type: ''
         },

@@ -1,8 +1,7 @@
 # Connect Stats
 Shows current Connect inventory, using a Connect Configuration.
 
-Currently Displays:
-
+## Currently Displaying
 - Channels
 	- Source Data Type
 	- Source Port (`HTTP and TCP as of now`)
@@ -35,15 +34,23 @@ Click the `Upload Icon` or `Choose a Report` input to select a Connect Configura
 Connect Configurations can be obtained using one of the following:
 
 ### Connect Command Line Interface (CLI)
-`exportcfg PATH-TO-FILE`
+```
+exportcfg PATH-TO-FILE
+```
+
+![Image of CLI Configuration Export](assets/images/cli-export.png)
 
 ### Connect Administrator
 1. Settings
 2. Server Tasks
 	- Backup Config
 
+![Image of CLI Configuration Export](assets/images/administrator-export.png)
+
 ### Connect Client API
-`https://CONNECT_IP_OR_DNS:8443/api/server/configuration`
+```
+https://CONNECT_IP_OR_DNS:8443/api/server/configuration
+```
 
 ## Depdendencies
 - JavaScript

@@ -1,6 +1,8 @@
 # Connect Stats
 Shows current Connect inventory, using a Connect Configuration.
 
+![Image of Sample Report](assets/images/sample-report.png | width=100)
+
 ## Currently Displaying
 - Channels
 	- Source Data Type

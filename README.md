@@ -55,12 +55,3 @@ exportcfg PATH-TO-FILE
 ```
 https://CONNECT_IP_OR_DNS:8443/api/server/configuration
 ```
-
-## Depdendencies
-- JavaScript
-	- [Vue.js](https://vuejs.org/)
-	- [lodash](https://lodash.com/)
-	- [nprogress](https://github.com/rstacruz/nprogress)
-- CSS
-	- [Bulma](https://bulma.io/)
-	- [Font Awesome](https://fontawesome.com)

@@ -37,10 +37,10 @@ Vue.component('table-row', {
         <td v-for="cell in cells">
             <span v-if="cell == 'backgroundColor'" class="tag has-text-black" v-bind:style="{ backgroundColor: row[cell]}">{{ row[cell] }}</span>
             <span v-else-if="cell == 'enabled' && row[cell]">Enabled</span>
-            <span v-else-if="cell == 'enabled' && !row[cell]" class="has-background-info has-text-white">Not Enabled</span>
-            <span v-else-if="cell == 'messageStorageMode' && row['developmentStorage']" class="has-background-danger has-text-white">{{ row.messageStorageMode }}</span>
-            <span v-else-if="cell == 'pruneMetaData' && !row['hasPruning']" class="has-background-danger has-text-white">No Pruning</span>
-            <span v-else-if="cell == 'description' && !row['hasDescription']" class="has-background-danger has-text-white">No Description</span>
+            <span v-else-if="cell == 'enabled' && !row[cell]" class="tag is-info">Not Enabled</span>
+            <span v-else-if="cell == 'messageStorageMode' && row['developmentStorage']" class="tag is-danger">{{ row.messageStorageMode }}</span>
+            <span v-else-if="cell == 'pruneMetaData' && !row['hasPruning']" class="tag is-danger">No Pruning</span>
+            <span v-else-if="cell == 'description' && !row['hasDescription']" class="tag is-danger">No Description</span>
             <span v-else>{{ row[cell] }}</span>
         </td>
     </tr>
@@ -88,6 +88,7 @@ let app = new Vue({
                 let type = files[0].type;
 
                 if(!this.isLoaded) {
+                    this.clearReport();
                     this.currentReport.lastModified = lastModified;
                     this.currentReport.name = name;
                     this.currentReport.size = size;
@@ -100,13 +101,12 @@ let app = new Vue({
                         return;
                     }
 
+                    this.clearReport();
                     this.currentReport.lastModified = lastModified;
                     this.currentReport.name = name;
                     this.currentReport.size = size;
                     this.currentReport.type = type;
                 }
-
-                this.clearReport();
 
                 if(_.isEqual(type, 'application/json')) {
                     this.loadJSONData(files[0]);
@@ -408,7 +408,7 @@ let app = new Vue({
                 notification: [],
                 currentReport: {
                     lastModified: '',
-                    name: 'Choose a report…',
+                    name: 'Choose a Configuartion File…',
                     size: '',
                     type: ''
                 }

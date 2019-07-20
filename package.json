@@ -1,0 +1,25 @@
+{
+  "name": "connect-stats",
+  "version": "1.0.0",
+  "description": "An offline Connect Configuration viewer",
+  "main": "assest/js/main.js",
+  "directories": {
+    "test": "test"
+  },
+  "scripts": {
+    "test": "standard \"assets/js/main.js\""
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/leovander/connect-stats.git"
+  },
+  "author": "Israel Torres",
+  "license": "MPL-2.0",
+  "bugs": {
+    "url": "https://github.com/leovander/connect-stats/issues"
+  },
+  "homepage": "https://github.com/leovander/connect-stats#readme",
+  "standard": {
+    "globals": [ "_", "Vue", "NProgress" ]
+  }
+}

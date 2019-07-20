@@ -287,7 +287,7 @@ let app = new Vue({
                         'enabled': (this.getText(this.getElements(metadata, 'enabled')[0], 'enabled') == 'true')
                     };
 
-                    if(_.includes(['TCP', 'HTTP'], connectorType)) {
+                    if(_.includes(['TCP', 'HTTP', 'INTEROP'], connectorType)) {
                         let listenerProperties = this.getElements(sourceProperties, 'listenerConnectorProperties')[0];
                         let host = this.getText(this.getElements(listenerProperties, 'host')[0], 'host');
                         let port = this.getText(this.getElements(listenerProperties, 'port')[0], 'port');

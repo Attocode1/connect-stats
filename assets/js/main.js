@@ -238,30 +238,38 @@ let app = new Vue({ // eslint-disable-line no-unused-vars, prefer-const
             }
           }
 
-          const metadata = this.getElements(this.getElements(channel, 'exportData')[0], 'metadata')[0]
-          const description = this.getElements(channel, 'description')[0].innerHTML.toString()
+          const exportData = this.getElements(channel, 'exportData')[0]
 
-          let pruningSettings = this.getElements(metadata, 'pruningSettings')
           let pruneMetaData = ''
           let pruneContentDays = ''
+          let enabled = false
 
-          if (_.isEqual(pruningSettings.length, 1)) {
-            pruningSettings = pruningSettings[0]
+          if (!_.isNull(exportData) && !_.isUndefined(exportData)) {
+            const metadata = this.getElements(exportData, 'metadata')[0]
+            let pruningSettings = this.getElements(metadata, 'pruningSettings')
 
-            pruneMetaData = this.getElements(pruningSettings, 'pruneMetaDataDays')
-            if (_.isEqual(pruneMetaData.length, 1)) {
-              pruneMetaData = pruneMetaData[0].innerHTML.toString()
-            } else {
-              pruneMetaData = ''
+            if (_.isEqual(pruningSettings.length, 1)) {
+              pruningSettings = pruningSettings[0]
+
+              pruneMetaData = this.getElements(pruningSettings, 'pruneMetaDataDays')
+              if (_.isEqual(pruneMetaData.length, 1)) {
+                pruneMetaData = pruneMetaData[0].innerHTML.toString()
+              } else {
+                pruneMetaData = ''
+              }
+
+              pruneContentDays = this.getElements(pruningSettings, 'pruneContentDays')
+              if (_.isEqual(pruneContentDays.length, 1)) {
+                pruneContentDays = pruneContentDays[0].innerHTML.toString()
+              } else {
+                pruneContentDays = ''
+              }
             }
 
-            pruneContentDays = this.getElements(pruningSettings, 'pruneContentDays')
-            if (_.isEqual(pruneContentDays.length, 1)) {
-              pruneContentDays = pruneContentDays[0].innerHTML.toString()
-            } else {
-              pruneContentDays = ''
-            }
+            enabled = _.isEqual(this.getText(this.getElements(metadata, 'enabled')[0], 'enabled'), 'true')
           }
+
+          const description = this.getElements(channel, 'description')[0].innerHTML.toString()
 
           const sourceConnector = this.getElements(channel, 'sourceConnector')[0]
           const sourceProperties = this.getElements(sourceConnector, 'properties')[0]
@@ -284,7 +292,7 @@ let app = new Vue({ // eslint-disable-line no-unused-vars, prefer-const
             host: '',
             port: '',
             isDanger: false,
-            enabled: _.isEqual(this.getText(this.getElements(metadata, 'enabled')[0], 'enabled'), 'true')
+            enabled: enabled
           }
 
           if (_.includes(['TCP', 'HTTP', 'INTEROP'], connectorType)) {
@@ -366,7 +374,7 @@ let app = new Vue({ // eslint-disable-line no-unused-vars, prefer-const
         try {
           return document.getElementsByTagName(name)
         } catch (error) {
-          this.setError(`Coudld not get element (${name})`, error)
+          this.setError(`Could not get element (${name})`, error)
         }
       } else {
         return null

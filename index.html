@@ -33,18 +33,35 @@
                     <h1 class="title" v-if="serverSettings.serverName">{{ serverSettings.serverName }}</h1>
                     <h1 class="title" v-else>No Server Name</h1>
                     <h2 class="subtitle">Version {{ serverSettings.version }}</h2>
-                    <template>
-                        <nav class="level">
+                    <nav class="level">
+                        <template>
                             <div class="level-item has-text-centered" v-for="group in groups">
                                 <div>
                                     <p class="heading">{{ group.label }}</p>
                                     <a v-bind:href="'#' + group.name"><p class="title">{{ group.items.length }}</p></a>
                                 </div>
                             </div>
-                        </nav>
-                    </template>
+                        </template>
+                        <div class="level-item has-text-centered">
+                            <div>
+                                <p class="heading">Tags</p>
+                                <a href="#tags"><p class="title">{{ channelTags.length }}</p></a>
+                            </div>
+                        </div>
+                    </nav>
                     <template v-for="group in groups">
                         <channel-table v-bind:channel-group="group.items" v-bind:id="group.name" v-bind:title="group.label" v-bind:columns="group.columns" v-bind:cells="group.tds"></channel-table>
+                    </template>
+                    <template v-if="channelTags.length > 0">
+                        <h1 class="title">Tags</h1>
+                        <div class="field is-grouped is-grouped-multiline" id="tags">
+                            <div class="control" v-for="tag in channelTags">
+                                <div class="tags has-addons">
+                                    <span class="tag is-dark">{{ tag.name }}</span>
+                                    <span class="tag" v-bind:style="{ backgroundColor: tag.backgroundColor, color: tag.fontColor }">{{ tag.channelCount }}</span>
+                                </div>
+                            </div>
+                        </div>
                     </template>
                 </template>
             </div>

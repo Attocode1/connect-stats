@@ -55,12 +55,12 @@ let app = new Vue({ // eslint-disable-line no-unused-vars, prefer-const
     groups: {
       channels: { label: 'Channels', name: 'channels', tds: ['sourceConnector', 'port', 'name', 'enabled', 'messageStorageMode', 'pruneMetaData', 'description'], columns: ['Type', 'Port', 'Name', 'Enabled', 'Storage', 'Pruning (days)', 'Description'], items: [] },
       channelGroups: { label: 'Groups', name: 'channelGroups', tds: ['name', 'channelCount'], columns: ['Name', 'Channels'], items: [] },
-      channelTags: { label: 'Tags', name: 'channelTags', tds: ['name', 'backgroundColor', 'channelCount'], columns: ['Name', 'Color', 'Channels'], items: [] },
       activePorts: { label: 'Ports', name: 'activePorts', tds: ['sourceConnector', 'port', 'name'], columns: ['Type', 'Port', 'Name'], items: [] },
       noMetadataPruning: { label: 'No Pruning', name: 'noMetadataPruning', tds: ['name'], columns: ['Name'], items: [] },
       nonProductionStorage: { label: 'Non-Production Storage', name: 'nonProductionStorage', tds: ['name'], columns: ['Name'], items: [] },
       noDescription: { label: 'No Description', name: 'noDescription', tds: ['name'], columns: ['Name'], items: [] }
     },
+    channelTags: [],
     showMessage: false,
     notification: [],
     currentReport: {
@@ -201,19 +201,21 @@ let app = new Vue({ // eslint-disable-line no-unused-vars, prefer-const
           const green = this.getText(this.getElements(bgColor, 'green')[0], 'green')
           const blue = this.getText(this.getElements(bgColor, 'blue')[0], 'blue')
           const alpha = this.getText(this.getElements(bgColor, 'alpha')[0], 'alpha')
+          const fontColor = colourIsLight(_.toNumber(red), _.toNumber(green), _.toNumber(blue))
 
           const channelTagObj = {
             id: this.getText(this.getElements(channelTag, 'id')[0], 'id'),
             name: this.getText(this.getElements(channelTag, 'name')[0], 'name'),
             channelCount: this.getElements(this.getElements(channelTag, 'channelIds')[0], 'string').length,
-            backgroundColor: `rgb(${red},${green},${blue},${alpha})`
+            backgroundColor: `rgb(${red},${green},${blue},${alpha})`,
+            fontColor: fontColor
           }
 
           channelTags.push(channelTagObj)
         }
 
         channelTags = _.sortBy(channelTags, ['name'])
-        vm.groups.channelTags.items = channelTags
+        vm.channelTags = channelTags
 
         const allChannelsXML = this.getElements(config, 'channels')
         let channelsXML
@@ -456,12 +458,12 @@ let app = new Vue({ // eslint-disable-line no-unused-vars, prefer-const
         groups: {
           channels: { label: 'Channels', name: 'channels', tds: ['sourceConnector', 'port', 'name', 'enabled', 'messageStorageMode', 'pruneMetaData', 'description'], columns: ['Type', 'Port', 'Name', 'Enabled', 'Storage', 'Pruning (days)', 'Description'], items: [] },
           channelGroups: { label: 'Groups', name: 'channelGroups', tds: ['name', 'channelCount'], columns: ['Name', 'Channels'], items: [] },
-          channelTags: { label: 'Tags', name: 'channelTags', tds: ['name', 'backgroundColor', 'channelCount'], columns: ['Name', 'Color', 'Channels'], items: [] },
           activePorts: { label: 'Ports', name: 'activePorts', tds: ['sourceConnector', 'port', 'name'], columns: ['Type', 'Port', 'Name'], items: [] },
           noMetadataPruning: { label: 'No Pruning', name: 'noMetadataPruning', tds: ['name'], columns: ['Name'], items: [] },
           nonProductionStorage: { label: 'Non-Production Storage', name: 'nonProductionStorage', tds: ['name'], columns: ['Name'], items: [] },
           noDescription: { label: 'No Description', name: 'noDescription', tds: ['name'], columns: ['Name'], items: [] }
         },
+        channelTags: [],
         showMessage: false,
         notification: [],
         currentReport: {
@@ -484,3 +486,9 @@ function isBlank (value) {
 }
 
 const backgroundColors = ['is-black', 'is-primary', 'is-link', 'is-info', 'is-success', 'is-warning', 'is-danger']
+
+// https://stackoverflow.com/a/1855903
+function colourIsLight (r, g, b) {
+  var a = 1 - (0.299 * r + 0.587 * g + 0.114 * b) / 255
+  return (a < 0.5) ? 'black' : 'white'
+}

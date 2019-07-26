@@ -878,7 +878,7 @@ return;</undeployScript>
           <pluginProperties/>
           <listenerConnectorProperties version="3.5.1">
             <host>0.0.0.0</host>
-            <port>6661</port>
+            <port>6662</port>
           </listenerConnectorProperties>
           <sourceConnectorProperties version="3.5.1">
             <responseVariable>Auto-generate (After source transformer)</responseVariable>
@@ -2078,7 +2078,7 @@ return;</undeployScript>
           </pluginProperties>
           <listenerConnectorProperties version="3.5.1">
             <host>0.0.0.0</host>
-            <port>9000</port>
+            <port>6662</port>
           </listenerConnectorProperties>
           <sourceConnectorProperties version="3.5.1">
             <responseVariable>None</responseVariable>

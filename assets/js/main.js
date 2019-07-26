@@ -41,6 +41,7 @@ Vue.component('table-row', {
             <span v-else-if="cell == 'messageStorageMode' && row['developmentStorage']" class="tag is-danger">{{ row.messageStorageMode }}</span>
             <span v-else-if="cell == 'pruneMetaData' && !row['hasPruning']" class="tag is-danger">No Pruning</span>
             <span v-else-if="cell == 'description' && !row['hasDescription']" class="tag is-danger">No Description</span>
+            <span v-else-if="cell == 'port' && row['isDuplicatePort']" class="tag" v-bind:class="row.duplicatePortBg">{{ row.port }}</span>
             <span v-else>{{ row[cell] }}</span>
         </td>
     </tr>
@@ -305,9 +306,27 @@ let app = new Vue({ // eslint-disable-line no-unused-vars, prefer-const
 
             const portObj = {
               port: port,
+              isDuplicatePort: false,
+              duplicatePortBg: '',
               name: channelObj.name,
               enabled: channelObj.enabled,
               sourceConnector: channelObj.sourceConnector
+            }
+
+            let duplicatePortIndex = _.findIndex(activePorts, (o) => {
+              return o.port === portObj.port
+            })
+
+            if (duplicatePortIndex > -1) {
+              portObj.isDuplicatePort = true
+            }
+
+            while (duplicatePortIndex > -1) {
+              activePorts[duplicatePortIndex].isDuplicatePort = true
+
+              duplicatePortIndex = _.findIndex(activePorts, (o) => {
+                return o.port === port && !o.isDuplicatePort
+              })
             }
 
             activePorts.push(portObj)
@@ -352,7 +371,38 @@ let app = new Vue({ // eslint-disable-line no-unused-vars, prefer-const
         channels = _.sortBy(channels, ['name'])
         vm.groups.channels.items = channels
 
-        activePorts = _.sortBy(activePorts, ['type', 'port', 'name'])
+        activePorts = _.sortBy(activePorts, ['port', 'type', 'name'])
+
+        let portBgColor = 0
+
+        activePorts.forEach((portObj, index) => {
+          if (portObj.isDuplicatePort) {
+            let bgColor = portObj.duplicatePortBg
+
+            if (portObj.duplicatePortBg === '') {
+              bgColor = backgroundColors[portBgColor]
+              activePorts[index].duplicatePortBg = bgColor
+
+              portBgColor++
+              if (portBgColor === backgroundColors.length) {
+                portBgColor = 0
+              }
+            }
+
+            let matchingPair = _.findIndex(activePorts, (o) => {
+              return o.port === portObj.port && o.duplicatePortBg === ''
+            })
+
+            while (matchingPair > -1) {
+              activePorts[matchingPair].duplicatePortBg = bgColor
+
+              matchingPair = _.findIndex(activePorts, (o) => {
+                return o.port === portObj.port && o.duplicatePortBg === ''
+              })
+            }
+          }
+        })
+
         vm.groups.activePorts.items = activePorts
 
         NProgress.done()
@@ -432,3 +482,5 @@ let app = new Vue({ // eslint-disable-line no-unused-vars, prefer-const
 function isBlank (value) {
   return _.isEmpty(value) && (!_.isNumber(value) || _.isNaN(value))
 }
+
+const backgroundColors = ['is-black', 'is-primary', 'is-link', 'is-info', 'is-success', 'is-warning', 'is-danger']

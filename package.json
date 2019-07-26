@@ -7,7 +7,7 @@
     "test": "test"
   },
   "scripts": {
-    "test": "standard \"./assets/js/main.js\" && if grep './assets/js/vue/dev.js' index.html; then echo 'Vue.js Development Mode Enabled, replace with Production'; exit 1; fi"
+    "test": "standard ./assets/js/main.js && if grep './assets/js/vue/dev.js' index.html; then echo 'Vue.js Development Mode Enabled, replace with Production'; exit 1; fi && if grep 'console.log' ./assets/js/main.js; then echo 'Remove console.log statements'; exit 1; fi"
   },
   "repository": {
     "type": "git",
